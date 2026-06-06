@@ -330,8 +330,8 @@ a { color: inherit; text-decoration: none; }
 .bc-row-label {
   font-family: 'Fira Code', monospace;
   font-size: 8.5px; color: var(--text-dim);
-  text-transform: uppercase; letter-spacing: .08em;
-  white-space: nowrap; min-width: 50px;
+  text-transform: uppercase; letter-spacing: .06em;
+  white-space: nowrap; flex-shrink: 0;
 }
 .chip {
   font-family: 'Fira Code', monospace;
@@ -354,6 +354,8 @@ a { color: inherit; text-decoration: none; }
 .chip-c5    { background: rgba(100,60,180,.2); color: #c4b5fd; border: 1px solid rgba(100,60,180,.4); }
 .chip-c7    { background: rgba(240,120,0,.2); color: #fbbf24; border: 1px solid rgba(240,120,0,.4); }
 .chip-vix   { background: rgba(220,0,80,.2); color: #fca5a5; border: 1px solid rgba(220,0,80,.38); }
+/* National/home country broadcaster chips */
+.chip-bc    { background: rgba(34,197,94,.1); color: #a3d9b0; border: 1px solid rgba(34,197,94,.22); }
 .bc-divider { width: 1px; height: 12px; background: var(--border2); flex-shrink: 0; }
 
 /* Note banner */
@@ -452,12 +454,7 @@ a { color: inherit; text-decoration: none; }
       <div class="legend-item"><span class="chip chip-fox1">FOX1</span> FOX One – all 104 English stream</div>
       <div class="legend-item"><span class="chip chip-bbc">BBC</span> UK free-to-air</div>
       <div class="legend-item"><span class="chip chip-itv">ITV</span> UK free-to-air</div>
-      <div class="legend-item"><span class="chip chip-ctv">CTV</span> Canada EN (free OTA)</div>
-      <div class="legend-item"><span class="chip chip-tsn">TSN</span> Canada EN (cable)</div>
-      <div class="legend-item"><span class="chip chip-rds">RDS</span> Canada FR (cable)</div>
-      <div class="legend-item"><span class="chip chip-c5">CANAL 5</span> Mexico – TelevisaUnivision</div>
-      <div class="legend-item"><span class="chip chip-c7">CANAL 7</span> Mexico – TV Azteca</div>
-      <div class="legend-item"><span class="chip chip-vix">ViX+</span> Mexico streaming</div>
+      <div class="legend-item"><span class="chip chip-bc">BROADCASTER NAME</span> Each team's home-country broadcaster (sourced from FIFA official media rights list)</div>
     </div>
   </div>
 </div>
@@ -644,6 +641,58 @@ GAMES.forEach(gm => {
   GROUP_TEAMS[gm.g].add(gm.a);
 });
 
+// Home-country broadcasters per team (source: FIFA official media rights list)
+// Teams covered by existing US rows (FOX/Telemundo) or UK row (BBC/ITV) are excluded to avoid redundancy
+const SKIP_TEAM_BC = new Set(["USA", "England", "Scotland"]);
+
+const TEAM_BC = {
+  "Mexico":                 ["Canal 5 (TelevisaUnivision)", "Canal 7 (TV Azteca)"],
+  "South Africa":           ["SABC", "SuperSport/DStv"],
+  "South Korea":            ["JTBC", "KBS", "NAVER/CHZZK"],
+  "Czechia":                ["ČT Sport", "TV Nova"],
+  "Canada":                 ["CTV", "TSN", "RDS (FR)"],
+  "Bosnia and Herzegovina": ["Arena Sport"],
+  "Switzerland":            ["SRG SSR (SRF/RTS/RSI)"],
+  "Qatar":                  ["beIN Sports"],
+  "Brazil":                 ["Globo", "CazéTV (YouTube/free)", "SBT/N Sports"],
+  "Morocco":                ["beIN Sports"],
+  "Haiti":                  ["TNH"],
+  "Australia":              ["SBS"],
+  "Paraguay":               ["Trece", "GEN TV"],
+  "Türkiye":                ["TRT 1"],
+  "Germany":                ["ARD", "ZDF", "MagentaTV"],
+  "Ecuador":                ["Teleamazonas"],
+  "Côte d'Ivoire":          ["RTI", "NCI"],
+  "Curaçao":                ["Nos Pais Television"],
+  "Netherlands":            ["NOS"],
+  "Japan":                  ["NHK", "Nippon TV", "Fuji TV", "DAZN"],
+  "Tunisia":                ["beIN Sports"],
+  "Sweden":                 ["SVT", "TV4"],
+  "Belgium":                ["VRT (NL)", "RTBF (FR)"],
+  "Iran":                   ["IRIB"],
+  "Egypt":                  ["beIN Sports"],
+  "New Zealand":            ["TVNZ"],
+  "Spain":                  ["RTVE", "DAZN"],
+  "Uruguay":                ["Canal 5 Uruguay", "Antel TV"],
+  "Saudi Arabia":           ["beIN Sports"],
+  "Cape Verde":             ["SuperSport", "New World TV"],
+  "France":                 ["M6", "beIN Sports"],
+  "Senegal":                ["RTS"],
+  "Norway":                 ["NRK", "TV 2"],
+  "Iraq":                   ["beIN Sports"],
+  "Argentina":              ["Telefe", "TV Pública", "TyC Sports"],
+  "Austria":                ["ORF", "ServusTV"],
+  "Algeria":                ["ENTV", "beIN Sports"],
+  "Jordan":                 ["beIN Sports"],
+  "Portugal":               ["RTP", "Sport TV", "SIC / TVI"],
+  "Colombia":               ["Caracol TV", "RCN", "Win Sports"],
+  "Uzbekistan":             ["Zo'r TV"],
+  "DR Congo":               ["SuperSport", "New World TV"],
+  "Croatia":                ["HRT"],
+  "Panama":                 ["RPC/COS", "TVN Media", "Tigo Sports"],
+  "Ghana":                  ["SuperSport", "Azam TV"],
+};
+
 // =====================================================================
 // HELPERS
 // =====================================================================
@@ -671,52 +720,48 @@ function chip(cls, label) {
 }
 
 function broadcastHTML(gm) {
-  const v = VENUES[gm.v];
   const isSim = gm.sim;
   const es = isSim && gm.ue === 'FS1' ? 'Universo' : 'Telemundo';
 
   let rows = '';
 
   // US English row
-  const usEnChip  = gm.ue === 'FOX' ? chip('chip-fox','FOX') : chip('chip-fs1','FS1');
-  const tubiChip  = gm.tubi ? chip('chip-tubi','TUBI') : '';
-  const fox1Chip  = chip('chip-fox1','FOX ONE');
+  const usEnChip = gm.ue === 'FOX' ? chip('chip-fox','FOX') : chip('chip-fs1','FS1');
+  const tubiChip = gm.tubi ? chip('chip-tubi','TUBI') : '';
   rows += `<div class="bc-row">
     <span class="bc-row-label">US (EN)</span>
     ${usEnChip}${tubiChip}
     <span class="bc-divider"></span>
-    ${fox1Chip}
+    ${chip('chip-fox1','FOX ONE')}
   </div>`;
 
   // US Spanish row
-  const esChip   = es === 'Telemundo' ? chip('chip-tmdo','TELEMUNDO') : chip('chip-univ','UNIVERSO');
-  const pcckChip = chip('chip-pcck','PEACOCK');
   rows += `<div class="bc-row">
     <span class="bc-row-label">US (ES)</span>
-    ${esChip}
+    ${es === 'Telemundo' ? chip('chip-tmdo','TELEMUNDO') : chip('chip-univ','UNIVERSO')}
     <span class="bc-divider"></span>
-    ${pcckChip}
+    ${chip('chip-pcck','PEACOCK')}
   </div>`;
 
   // UK row
   rows += `<div class="bc-row">
     <span class="bc-row-label">UK</span>
     ${chip('chip-bbc','BBC')}${chip('chip-itv','ITV')}
-    <span style="font-family:'Fira Code',monospace;font-size:8.5px;color:var(--text-dim);margin-left:4px;">(see note above re: exact split)</span>
+    <span style="font-family:'Fira Code',monospace;font-size:8px;color:var(--text-dim);margin-left:4px;">(exact split: check bbc.co.uk/sport or itv.com/sport)</span>
   </div>`;
 
-  // Local row if Canada or Mexico
-  if (v.country === 'CA') {
+  // Home-country broadcaster rows for each team
+  [gm.h, gm.a].forEach(teamName => {
+    if (SKIP_TEAM_BC.has(teamName)) return;
+    const bcs = TEAM_BC[teamName];
+    const t = TEAMS[teamName];
+    if (!bcs || !t) return;
+    const chips = bcs.map(b => chip('chip-bc', b)).join('');
     rows += `<div class="bc-row">
-      <span class="bc-row-label">🇨🇦 CAN</span>
-      ${chip('chip-ctv','CTV')}${chip('chip-tsn','TSN')}${chip('chip-rds','RDS (FR)')}
+      <span class="bc-row-label">${t.flag} ${teamName}</span>
+      ${chips}
     </div>`;
-  } else if (v.country === 'MX') {
-    rows += `<div class="bc-row">
-      <span class="bc-row-label">🇲🇽 MEX</span>
-      ${chip('chip-c5','CANAL 5')}${chip('chip-c7','CANAL 7')}${chip('chip-vix','ViX+')}
-    </div>`;
-  }
+  });
 
   return `<div class="bc-section">${rows}</div>`;
 }
